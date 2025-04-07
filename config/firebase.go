@@ -13,7 +13,7 @@ var FirebaseClient *db.Client
 
 func InitFirebase() {
 	ctx := context.Background()
-	opt := option.WithCredentialsFile("serviceAccountKey.json")
+	opt := option.WithCredentialsFile("/app/serviceAccountKey.json")
 
 	conf := &firebase.Config{
 		DatabaseURL: "https://smartvehiclesentinel-2ed68-default-rtdb.asia-southeast1.firebasedatabase.app/",
