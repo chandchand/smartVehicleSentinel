@@ -22,7 +22,7 @@ func InitFirebase() {
 	// Inisialisasi Firebase dengan kredensial dari env
 	opt := option.WithCredentialsJSON([]byte(creds))
 	config := &firebase.Config{
-		DatabaseURL: "https://smartvehiclesentinel-2ed68-default-rtdb.asia-southeast1.firebasedatabase.app/",
+		DatabaseURL: "https://smartvehiclesentinel-2ed68.firebaseio.com/",
 	}
 
 	app, err := firebase.NewApp(context.Background(), config, opt)
