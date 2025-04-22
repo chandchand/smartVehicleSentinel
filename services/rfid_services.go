@@ -50,6 +50,22 @@ func SaveRFIDToFirebase(nama, uid string) error {
 	log.Println("✅ RFID berhasil disimpan ke Firebase:", uid)
 	return nil
 }
+func SetRFIDRegister(nama string) {
+	// Set register mode di Firebase jadi true
+	url := fmt.Sprintf("%s/rfid_register_mode.json", rfidFirebaseURL)
+	req, _ := http.NewRequest(http.MethodPut, url, bytes.NewBuffer([]byte("true")))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("❌ Gagal set register mode:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	log.Println("✅ Mode daftar RFID diaktifkan untuk:", nama)
+}
 
 func HandleRFIDMessage(client mqtt.Client, msg mqtt.Message) {
 	uid := string(msg.Payload())
