@@ -17,39 +17,51 @@ import (
 const rfidFirebaseURL = "https://smartvehiclesentinel-2ed68-default-rtdb.asia-southeast1.firebasedatabase.app"
 
 func SaveRFIDToFirebase(nama, uid string) error {
+	timestamp := time.Now().Format(time.RFC3339Nano)
+
 	data := models.RFIDUser{
 		Nama:      nama,
 		UID:       uid,
 		Timestamp: time.Now(),
 	}
 
+	// 1. Simpan ke rfidData
 	url := fmt.Sprintf("%s/rfidData.json", rfidFirebaseURL)
-
 	payload, _ := json.Marshal(data)
+
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payload))
 	if err != nil {
 		log.Println("❌ Error membuat request:", err)
 		return err
 	}
-
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		log.Println("❌ Error mengirim request ke Firebase:", err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		log.Println("❌ Gagal simpan RFID ke Firebase. Status:", resp.Status)
 		return err
 	}
-
+	defer resp.Body.Close()
 	log.Println("✅ RFID berhasil disimpan ke Firebase:", uid)
+
+	// 2. Update last_registered_uid
+	lastRegData := map[string]string{
+		"uid":       uid,
+		"nama":      nama,
+		"timestamp": timestamp,
+	}
+	lastPayload, _ := json.Marshal(lastRegData)
+	lastUrl := fmt.Sprintf("%s/last_registered_uid.json", rfidFirebaseURL)
+	http.Post(lastUrl, "application/json", bytes.NewBuffer(lastPayload))
+
+	// 3. Set register mode ke false
+	regUrl := fmt.Sprintf("%s/rfid_register_mode.json", rfidFirebaseURL)
+	http.Post(regUrl, "application/json", bytes.NewBuffer([]byte("false")))
+
 	return nil
 }
+
 func SetRFIDRegister(nama string) {
 	// Set register mode di Firebase jadi true
 	url := fmt.Sprintf("%s/rfid_register_mode.json", rfidFirebaseURL)
