@@ -1,16 +1,14 @@
 package utils
 
 import (
-	"log"
+	"fmt"
 	"time"
 )
 
 // GetNowInWIB mengembalikan waktu sekarang dalam zona Asia/Jakarta (WIB)
 func GetNowInWIB() time.Time {
-	loc, err := time.LoadLocation("Asia/Jakarta")
-	if err != nil {
-		log.Println("Gagal memuat lokasi WIB, fallback ke UTC:", err)
-		return time.Now().UTC()
-	}
+	loc := time.FixedZone("WIB", 7*60*60)
+	t := time.Now().In(loc)
+	fmt.Println("Waktu WIB:", t)
 	return time.Now().In(loc)
 }
