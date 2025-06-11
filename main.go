@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"smartVehicleSentinel/config"
 	"smartVehicleSentinel/routes"
@@ -12,6 +13,11 @@ import (
 
 func main() {
 	config.InitFirebase()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go services.StartScheduler(ctx)
 
 	opts := config.GetMQTTOptions()
 	opts.OnConnect = func(client mqtt.Client) {
