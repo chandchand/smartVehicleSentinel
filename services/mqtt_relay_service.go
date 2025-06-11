@@ -5,6 +5,7 @@ import (
 	"log"
 	"smartVehicleSentinel/config"
 	"smartVehicleSentinel/models"
+	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -43,6 +44,7 @@ func SubscribeRelayTopic() {
 			"contact": currentRelayStatus.Contact,
 			"engine":  currentRelayStatus.Engine,
 			"key":     currentRelayStatus.Key,
+			"last_on": time.Now().Format(time.RFC3339), // hasil: 2025-06-11T15:48:21+07:00, // Tambahkan field last_on jika diperlukan
 		}
 
 		err := UpdateRelayStatus(relayStatusMap)
@@ -62,30 +64,56 @@ func SubscribeRelayTopic() {
 }
 
 func UpdateRelayStatusFromCommand(command string) error {
-	var status models.Relay
+	// Ambil status relay sekarang (dari Firebase atau DB)
+	currentStatus, err := GetCurrentRelayStatus()
+	if err != nil {
+		return fmt.Errorf("gagal ambil status relay saat ini: %v", err)
+	}
 
+	// Update status sesuai command
 	switch command {
 	case "contact_on":
-		status.Contact = true
+		currentStatus.Contact = true
 	case "contact_off":
-		status.Contact = false
+		currentStatus.Contact = false
 	case "engine_on":
-		status.Engine = true
+		currentStatus.Engine = true
 	case "engine_off":
-		status.Engine = false
+		currentStatus.Engine = false
 	case "key_on":
-		status.Key = true
+		currentStatus.Key = true
 	case "key_off":
-		status.Key = false
+		currentStatus.Key = false
 	default:
 		return fmt.Errorf("command tidak dikenali: %s", command)
 	}
 
-	// Kirim ke Firebase atau DB-mu
-	statusMap := map[string]interface{}{
-		"contact": status.Contact,
-		"engine":  status.Engine,
-		"key":     status.Key,
+	// currentStatus.LastOn = utils.GetNowInWIB().Format("2006-01-02 15:04:05")
+	currentStatus.LastOnRaw = time.Now().Format(time.RFC3339) // hasil: 2025-06-11T15:48:21+07:00
+
+	relayStatusMap := map[string]interface{}{
+		"contact": currentStatus.Contact,
+		"engine":  currentStatus.Engine,
+		"key":     currentStatus.Key,
+		"last_on": currentStatus.LastOnRaw, // Tambahkan field last_on jika diperlukan
 	}
-	return UpdateRelayStatus(statusMap)
+	return UpdateRelayStatus(relayStatusMap)
+}
+
+func PublishRelayCommand(target string, state string) {
+	if config.MQTTClient == nil || !config.MQTTClient.IsConnected() {
+		log.Println("❌ MQTT Client belum terhubung")
+		return
+	}
+
+	command := fmt.Sprintf("%s_%s", target, state) // contoh: "contact_on"
+	token := config.MQTTClient.Publish("vehicle/relay", 0, false, command)
+	token.Wait()
+
+	if token.Error() != nil {
+		log.Printf("❌ Gagal publish ke MQTT: %v", token.Error())
+	} else {
+		log.Printf("📤 Publish MQTT: %s", command)
+		_ = UpdateRelayStatusFromCommand(command) // Update status di Firebase
+	}
 }
