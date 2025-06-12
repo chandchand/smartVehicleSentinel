@@ -5,6 +5,7 @@ import (
 	"log"
 	"smartVehicleSentinel/config"
 	"smartVehicleSentinel/models"
+	"smartVehicleSentinel/utils"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -44,7 +45,7 @@ func SubscribeRelayTopic() {
 			"contact": currentRelayStatus.Contact,
 			"engine":  currentRelayStatus.Engine,
 			"key":     currentRelayStatus.Key,
-			"last_on": time.Now().Format(time.RFC3339), // hasil: 2025-06-11T15:48:21+07:00, // Tambahkan field last_on jika diperlukan
+			"last_on": utils.GetNowInWIB().Format(time.RFC3339), // hasil: 2025-06-11T15:48:21+07:00, // Tambahkan field last_on jika diperlukan
 		}
 
 		err := UpdateRelayStatus(relayStatusMap)
@@ -89,7 +90,8 @@ func UpdateRelayStatusFromCommand(command string) error {
 	}
 
 	// currentStatus.LastOn = utils.GetNowInWIB().Format("2006-01-02 15:04:05")
-	currentStatus.LastOnRaw = time.Now().Format(time.RFC3339) // hasil: 2025-06-11T15:48:21+07:00
+	currentStatus.LastOnRaw = utils.GetNowInWIB().Format(time.RFC3339)
+	// hasil: 2025-06-11T15:48:21+07:00
 
 	relayStatusMap := map[string]interface{}{
 		"contact": currentStatus.Contact,
