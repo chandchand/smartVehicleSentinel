@@ -8,7 +8,7 @@ import (
 )
 
 func StartScheduler(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(1 * time.Second) // 🔁 Cek setiap detik
 	defer ticker.Stop()
 
 	for {
@@ -25,7 +25,7 @@ func StartScheduler(ctx context.Context) {
 				log.Println("❌ Failed get schedules:", err)
 				continue
 			}
-			// Ambil status relay sekarang
+
 			currentStatus, err := GetCurrentRelayStatus()
 			if err != nil {
 				log.Println("❌ Gagal ambil status relay:", err)
@@ -46,7 +46,7 @@ func StartScheduler(ctx context.Context) {
 				startToday := time.Date(now.Year(), now.Month(), now.Day(), startTime.Hour(), startTime.Minute(), 0, 0, now.Location())
 				endTime := startToday.Add(time.Duration(s.DurationMinute) * time.Minute)
 
-				// 🔐 VALIDASI: skip schedule jika kendaraan sudah dinyalakan sebelum waktu schedule
+				// ⛔ Jika kendaraan dinyalakan manual sebelum jadwal
 				if currentStatus.LastOn.Year() == now.Year() &&
 					currentStatus.LastOn.Month() == now.Month() &&
 					currentStatus.LastOn.Day() == now.Day() &&
@@ -57,24 +57,22 @@ func StartScheduler(ctx context.Context) {
 					continue
 				}
 
-				// log.Printf("📅 Jadwal: %s - StartToday: %s, LastOn: %s", s.ID, startToday.Format(time.RFC3339), currentStatus.LastOn.Format(time.RFC3339))
-
-				// 🔛 Menyalakan sesuai urutan
-				if now.Format("15:04") == startToday.Format("15:04") {
-					orderOn := []string{"contact", "key", "engine"} // urutan pasti
+				// ✅ Eksekusi jika waktu sekarang dalam range 30 detik dari jadwal mulai
+				if isNowInRange(now, startToday, 30*time.Second) {
+					orderOn := []string{"contact", "key", "engine"}
 					for _, t := range orderOn {
 						for _, target := range s.OnTargets {
 							if t == target {
 								log.Printf("⚡ Menyalakan: %s", t)
 								if t == "contact" && currentStatus.Contact {
-									log.Printf("ℹ️ %s sudah ON, skip penjadwalan", t)
+									log.Printf("%s sudah ON, skip penjadwalan", t)
 									continue
 								}
-								PublishRelayCommand(t, "on")            // TANPA 'go' supaya berurutan
-								UpdateRelayStatusFromCommand(t + "_on") // update status
-								// ⏱️ Delay 5 detik khusus sebelum "engine"
+								PublishRelayCommand(t, "on")
+								UpdateRelayStatusFromCommand(t + "_on")
+
 								if t == "contact" && contains(s.OnTargets, "engine") {
-									log.Println("⏳ Menunggu 5 detik sebelum nyalakan engine...")
+									log.Println("Menunggu 5 detik sebelum nyalakan engine...")
 									time.Sleep(5 * time.Second)
 								} else {
 									time.Sleep(1 * time.Second)
@@ -84,20 +82,19 @@ func StartScheduler(ctx context.Context) {
 					}
 				}
 
-				// 🔻 Mematikan sesuai urutan terbalik
-				if now.Format("15:04") == endTime.Format("15:04") {
+				// ⏹️ Matikan relay jika dalam range waktu akhir
+				if isNowInRange(now, endTime, 30*time.Second) {
 					orderOff := []string{"contact"}
 					for _, t := range orderOff {
 						for _, target := range s.OffTargets {
 							if t == target {
-
 								if t == "contact" && !currentStatus.Contact {
 									log.Printf("ℹ️ %s sudah OFF, skip.", t)
 									continue
 								}
 								log.Printf("💤 Mematikan: %s", t)
-								PublishRelayCommand(t, "off")            // TANPA 'go' supaya berurutan
-								UpdateRelayStatusFromCommand(t + "_off") // update status
+								PublishRelayCommand(t, "off")
+								UpdateRelayStatusFromCommand(t + "_off")
 								time.Sleep(1 * time.Second)
 							}
 						}
@@ -107,6 +104,7 @@ func StartScheduler(ctx context.Context) {
 		}
 	}
 }
+
 func contains(arr []string, val string) bool {
 	for _, s := range arr {
 		if s == val {
@@ -114,4 +112,13 @@ func contains(arr []string, val string) bool {
 		}
 	}
 	return false
+}
+
+// Fungsi untuk mengecek waktu sekarang dalam rentang toleransi
+func isNowInRange(now, target time.Time, tolerance time.Duration) bool {
+	diff := now.Sub(target)
+	if diff < 0 {
+		diff = -diff
+	}
+	return diff <= tolerance
 }
