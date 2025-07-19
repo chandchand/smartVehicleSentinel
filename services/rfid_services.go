@@ -164,7 +164,7 @@ func ValidateAndTriggerAccess(uid string) {
 
 		utils.PublishMQTT("vehicle/relay", "key_on")
 		_ = UpdateRelayStatusFromCommand("key_on")
-		time.Sleep(2 * time.Second)
+		// time.Sleep(1 * time.Second)
 
 		utils.PublishMQTT("vehicle/relay", "contact_on")
 		_ = UpdateRelayStatusFromCommand("contact_on")
@@ -201,7 +201,7 @@ func createAccessLog(uid, nama, status string) {
 	logData := map[string]interface{}{
 		"uid":       uid,
 		"nama":      nama,
-		"timestamp": time.Now().Format(time.RFC3339),
+		"timestamp": utils.GetNowInWIB().Format(time.RFC3339),
 		"status":    status,
 	}
 	payload, _ := json.Marshal(logData)
