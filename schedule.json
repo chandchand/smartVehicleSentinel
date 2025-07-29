@@ -1,0 +1,11 @@
+{
+  "sched_test": {
+    "id": "sched_test",
+    "on_targets": ["contact", "engine"],
+    "off_targets": ["contact"],
+    "start_time": "17:34",
+    "duration_minutes": 2,
+    "repeat_daily": true,
+    "active": true
+  }
+}

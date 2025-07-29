@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: smart-vehicle-sentinel
+    env: go
+    region: singapore
+    branch: production
+    buildCommand: go build -o main .
+    startCommand: ./main
+    envVars:
+      - key: FIREBASE_CREDENTIALS
+        sync: false
