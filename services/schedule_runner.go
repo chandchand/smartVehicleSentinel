@@ -8,7 +8,7 @@ import (
 )
 
 func StartScheduler(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Second) // 🔁 Cek setiap detik
+	ticker := time.NewTicker(10 * time.Second) // 🔁 Cek setiap detik
 	defer ticker.Stop()
 
 	for {
@@ -58,8 +58,9 @@ func StartScheduler(ctx context.Context) {
 				}
 
 				// ✅ Eksekusi jika waktu sekarang dalam range 30 detik dari jadwal mulai
-				if isNowInRange(now, startToday, 30*time.Second) {
-					orderOn := []string{"contact", "key", "engine"}
+				if now.After(endTime.Add(-1*time.Minute)) && now.Before(endTime.Add(30*time.Second)) {
+					log.Printf("✅ Eksekusi jadwal %s pada %s", s.ID, now.Format("15:04"))
+					orderOn := []string{"contact", "engine"}
 					for _, t := range orderOn {
 						for _, target := range s.OnTargets {
 							if t == target {
@@ -74,8 +75,6 @@ func StartScheduler(ctx context.Context) {
 								if t == "contact" && contains(s.OnTargets, "engine") {
 									log.Println("Menunggu 5 detik sebelum nyalakan engine...")
 									time.Sleep(5 * time.Second)
-								} else {
-									time.Sleep(1 * time.Second)
 								}
 							}
 						}
@@ -83,7 +82,8 @@ func StartScheduler(ctx context.Context) {
 				}
 
 				// ⏹️ Matikan relay jika dalam range waktu akhir
-				if isNowInRange(now, endTime, 30*time.Second) {
+				if now.After(endTime.Add(-1*time.Minute)) && now.Before(endTime.Add(30*time.Second)) {
+					log.Printf("⏹️ Matikan relay untuk jadwal %s pada %s", s.ID, now.Format("15:04"))
 					orderOff := []string{"contact"}
 					for _, t := range orderOff {
 						for _, target := range s.OffTargets {
